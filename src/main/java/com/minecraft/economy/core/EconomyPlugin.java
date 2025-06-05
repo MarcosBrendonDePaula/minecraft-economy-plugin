@@ -1,9 +1,8 @@
 package com.minecraft.economy.core;
 
 import com.minecraft.economy.commands.*;
-import com.minecraft.economy.database.AsyncMongoDBManager;
 import com.minecraft.economy.database.ConfigDatabase;
-import com.minecraft.economy.database.MongoDBManager;
+import com.minecraft.economy.database.ResilientMongoDBManager;
 import com.minecraft.economy.economy.VaultEconomyProvider;
 import com.minecraft.economy.listeners.PlayerListener;
 import com.minecraft.economy.lottery.LotteryManager;
@@ -20,8 +19,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 public class EconomyPlugin extends JavaPlugin {
 
     private ConfigManager configManager;
-    private AsyncMongoDBManager asyncMongoDBManager;
-    private MongoDBManager mongoDBManager;
+    private ResilientMongoDBManager mongoDBManager;
     private VaultEconomyProvider economyProvider;
     private ShopManager shopManager;
     private LotteryManager lotteryManager;
@@ -35,13 +33,17 @@ public class EconomyPlugin extends JavaPlugin {
         // Inicializa o gerenciador de configurações
         configManager = new ConfigManager(this);
         
-        // Inicializa o gerenciador de MongoDB assíncrono
-        asyncMongoDBManager = new AsyncMongoDBManager(this);
-        asyncMongoDBManager.connect();
+        // Inicializa o gerenciador resiliente de MongoDB
+        mongoDBManager = new ResilientMongoDBManager(this);
+        boolean connected = mongoDBManager.connect();
         
-        // Inicializa o gerenciador de MongoDB (compatibilidade)
-        mongoDBManager = new MongoDBManager(this);
-        mongoDBManager.connect();
+        if (!connected) {
+            getLogger().warning("Não foi possível conectar ao MongoDB! O plugin continuará funcionando com dados em cache quando possível.");
+            getLogger().warning("Verifique sua configuração de MongoDB e certifique-se de que o servidor está acessível.");
+            getLogger().warning("O plugin tentará reconectar automaticamente em segundo plano.");
+        } else {
+            getLogger().info("Conexão com MongoDB estabelecida com sucesso!");
+        }
         
         // Inicializa o banco de dados de configurações
         configDatabase = new ConfigDatabase(this);
@@ -91,10 +93,6 @@ public class EconomyPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         // Fecha a conexão com o MongoDB
-        if (asyncMongoDBManager != null) {
-            asyncMongoDBManager.disconnect();
-        }
-        
         if (mongoDBManager != null) {
             mongoDBManager.disconnect();
         }
@@ -111,18 +109,20 @@ public class EconomyPlugin extends JavaPlugin {
     }
 
     /**
-     * Obtém o gerenciador de MongoDB assíncrono
-     * @return Gerenciador de MongoDB assíncrono
+     * Obtém o gerenciador resiliente de MongoDB
+     * @return Gerenciador resiliente de MongoDB
      */
-    public AsyncMongoDBManager getAsyncMongoDBManager() {
-        return asyncMongoDBManager;
+    public ResilientMongoDBManager getMongoDBManager() {
+        return mongoDBManager;
     }
 
     /**
-     * Obtém o gerenciador de MongoDB (compatibilidade)
+     * Obtém o gerenciador de MongoDB para compatibilidade com código legado
      * @return Gerenciador de MongoDB
+     * @deprecated Use getMongoDBManager() em vez disso
      */
-    public MongoDBManager getMongoDBManager() {
+    @Deprecated
+    public ResilientMongoDBManager getAsyncMongoDBManager() {
         return mongoDBManager;
     }
 

@@ -6,17 +6,17 @@ plugin:
 
 # Configurações do MongoDB
 mongodb:
-  uri: 'mongodb://localhost:27017'
+  connection_string: 'mongodb://localhost:27017'
   database: 'minecraft_economy'
+  connect_timeout: 5000
+  socket_timeout: 5000
+  max_wait_time: 5000
+  pool_size: 10
   auth:
     enabled: false
     username: ''
     password: ''
     authSource: 'admin'
-  connection:
-    timeout: 5000
-    maxPoolSize: 10
-    minPoolSize: 2
 
 # Configurações da economia
 economy:
@@ -61,3 +61,10 @@ interface:
     - 'Armas'
     - 'Comida'
     - 'Diversos'
+
+# Configurações da loteria
+lottery:
+  ticket_price: 100.0
+  draw_interval: 86400000
+  max_tickets_per_player: 5
+  enabled: true

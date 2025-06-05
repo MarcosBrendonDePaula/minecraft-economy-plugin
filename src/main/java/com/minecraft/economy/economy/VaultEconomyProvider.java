@@ -104,11 +104,11 @@ public class VaultEconomyProvider implements Economy {
             }
             
             // Verifica no banco de dados com timeout para evitar bloqueios
-            CompletableFuture<Boolean> future = plugin.getAsyncMongoDBManager().hasAccount(playerId);
+            CompletableFuture<Boolean> future = plugin.getMongoDBManager().hasAccount(playerId);
             return future.get(500, TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             plugin.getLogger().log(Level.WARNING, "Erro ao verificar conta: " + e.getMessage());
-            return false;
+            return true; // Assume que tem conta para evitar problemas
         }
     }
 
@@ -152,7 +152,7 @@ public class VaultEconomyProvider implements Economy {
         
         try {
             // Obtém o saldo do banco de dados com timeout para evitar bloqueios
-            CompletableFuture<Double> future = plugin.getAsyncMongoDBManager().getBalance(playerId);
+            CompletableFuture<Double> future = plugin.getMongoDBManager().getBalance(playerId);
             double balance = future.get(500, TimeUnit.MILLISECONDS);
             
             // Atualiza o cache
@@ -168,7 +168,8 @@ public class VaultEconomyProvider implements Economy {
                 return balanceCache.get(playerId);
             }
             
-            return 0.0;
+            // Se não há cache, retorna o saldo inicial
+            return plugin.getConfigManager().getInitialBalance();
         }
     }
 
@@ -256,7 +257,7 @@ public class VaultEconomyProvider implements Economy {
         
         try {
             // Retira o dinheiro do jogador com timeout para evitar bloqueios
-            CompletableFuture<Boolean> future = plugin.getAsyncMongoDBManager().withdraw(playerId, amount, "Vault API");
+            CompletableFuture<Boolean> future = plugin.getMongoDBManager().withdraw(playerId, amount, "Vault API");
             boolean success = future.get(500, TimeUnit.MILLISECONDS);
             
             if (success) {
@@ -312,7 +313,7 @@ public class VaultEconomyProvider implements Economy {
         
         try {
             // Deposita o dinheiro na conta do jogador com timeout para evitar bloqueios
-            CompletableFuture<Boolean> future = plugin.getAsyncMongoDBManager().deposit(playerId, amount, "Vault API");
+            CompletableFuture<Boolean> future = plugin.getMongoDBManager().deposit(playerId, amount, "Vault API");
             boolean success = future.get(500, TimeUnit.MILLISECONDS);
             
             if (success) {
@@ -429,7 +430,7 @@ public class VaultEconomyProvider implements Economy {
         try {
             // Cria a conta do jogador com timeout para evitar bloqueios
             double initialBalance = plugin.getConfigManager().getInitialBalance();
-            CompletableFuture<Boolean> future = plugin.getAsyncMongoDBManager().createAccount(playerId, playerName, initialBalance);
+            CompletableFuture<Boolean> future = plugin.getMongoDBManager().createAccount(playerId, playerName, initialBalance);
             boolean success = future.get(500, TimeUnit.MILLISECONDS);
             
             if (success) {
@@ -443,23 +444,5 @@ public class VaultEconomyProvider implements Economy {
             plugin.getLogger().log(Level.WARNING, "Erro ao criar conta: " + e.getMessage());
             return false;
         }
-    }
-    
-    /**
-     * Limpa o cache de saldos
-     */
-    public void clearCache() {
-        balanceCache.clear();
-        cacheTimestamps.clear();
-    }
-    
-    /**
-     * Atualiza o cache de saldo de um jogador
-     * @param playerId UUID do jogador
-     * @param balance Novo saldo
-     */
-    public void updateCache(UUID playerId, double balance) {
-        balanceCache.put(playerId, balance);
-        cacheTimestamps.put(playerId, System.currentTimeMillis());
     }
 }

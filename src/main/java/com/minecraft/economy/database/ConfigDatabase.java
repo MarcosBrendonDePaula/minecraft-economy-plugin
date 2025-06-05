@@ -17,14 +17,14 @@ import java.util.logging.Level;
 public class ConfigDatabase {
 
     private final EconomyPlugin plugin;
-    private final AsyncMongoDBManager mongoManager;
+    private final ResilientMongoDBManager mongoManager;
     private final Map<String, Object> configCache = new HashMap<>();
     private final long cacheDuration = 60000; // 1 minuto
     private long lastCacheUpdate = 0;
 
     public ConfigDatabase(EconomyPlugin plugin) {
         this.plugin = plugin;
-        this.mongoManager = plugin.getAsyncMongoDBManager();
+        this.mongoManager = plugin.getMongoDBManager();
         loadConfigFromDatabase();
     }
 
