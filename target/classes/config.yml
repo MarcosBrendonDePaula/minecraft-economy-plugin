@@ -1,0 +1,63 @@
+# Configuração do MongoDB e economia
+# Configurações gerais do plugin
+plugin:
+  debug: false
+  prefix: '&8[&6Economia&8] &r'
+
+# Configurações do MongoDB
+mongodb:
+  uri: 'mongodb://localhost:27017'
+  database: 'minecraft_economy'
+  auth:
+    enabled: false
+    username: ''
+    password: ''
+    authSource: 'admin'
+  connection:
+    timeout: 5000
+    maxPoolSize: 10
+    minPoolSize: 2
+
+# Configurações da economia
+economy:
+  starting_balance: 1000.0
+  currency_singular: 'Moeda'
+  currency_plural: 'Moedas'
+  currency_symbol: '$'
+  format: '%symbol%%amount%'
+  decimals: 2
+
+# Configurações do sistema de impostos
+taxes:
+  transaction_tax: 0.02  # 2% de imposto em transações
+  wealth_tax:
+    enabled: true
+    threshold: 100000.0  # Valor a partir do qual o imposto de riqueza é aplicado
+    rate: 0.01  # 1% de imposto sobre riqueza acima do threshold
+  inactivity_decay:
+    enabled: true
+    days_threshold: 7  # Dias de inatividade antes de começar a decair
+    daily_rate: 0.005  # 0.5% de decaimento diário após o threshold
+
+# Configurações do sistema de shop
+shop:
+  update_interval: 30  # Intervalo em minutos para atualização de preços
+  price_limits:
+    min_multiplier: 0.1  # Preço mínimo = preço base * min_multiplier
+    max_multiplier: 10.0  # Preço máximo = preço base * max_multiplier
+  algorithm:
+    scarcity_weight: 0.6  # Peso do fator de escassez no cálculo
+    demand_weight: 0.4  # Peso do fator de demanda no cálculo
+    history_days: 7  # Dias de histórico para análise de tendências
+
+# Configurações de interface
+interface:
+  shop_title: '&8[&6Shop do Servidor&8]'
+  items_per_page: 45
+  categories:
+    - 'Blocos'
+    - 'Recursos'
+    - 'Ferramentas'
+    - 'Armas'
+    - 'Comida'
+    - 'Diversos'
