@@ -14,6 +14,7 @@ commands:
     description: Comandos administrativos de economia
     usage: /eco [give|take|set|reset] <jogador> <quantia>
     permission: economy.admin
+    aliases: [ecoadmin]
   shop:
     description: Abre a interface de shop do servidor
     usage: /shop
@@ -26,6 +27,10 @@ commands:
     description: Sistema de loteria do servidor
     usage: /lottery [buy|tickets|draw|help]
     aliases: [loteria]
+  pay:
+    description: Transfere dinheiro para outro jogador
+    usage: /pay <jogador> <quantia>
+    permission: economy.money.pay
 permissions:
   economy.admin:
     description: Permite acesso a comandos administrativos
