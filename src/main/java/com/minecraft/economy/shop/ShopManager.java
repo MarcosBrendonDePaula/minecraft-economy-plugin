@@ -45,10 +45,33 @@ public class ShopManager {
                 // Adiciona alguns itens padrão
                 addShopItem("stone", "Pedra", Material.STONE, 10.0, "blocks");
                 addShopItem("dirt", "Terra", Material.DIRT, 5.0, "blocks");
+                addShopItem("grass_block", "Bloco de Grama", Material.GRASS_BLOCK, 15.0, "blocks");
+                addShopItem("cobblestone", "Pedregulho", Material.COBBLESTONE, 8.0, "blocks");
+                addShopItem("oak_log", "Tronco de Carvalho", Material.OAK_LOG, 20.0, "blocks");
+                addShopItem("sand", "Areia", Material.SAND, 7.0, "blocks");
+                
                 addShopItem("iron_pickaxe", "Picareta de Ferro", Material.IRON_PICKAXE, 100.0, "tools");
+                addShopItem("iron_axe", "Machado de Ferro", Material.IRON_AXE, 100.0, "tools");
+                addShopItem("iron_shovel", "Pá de Ferro", Material.IRON_SHOVEL, 80.0, "tools");
+                addShopItem("iron_sword", "Espada de Ferro", Material.IRON_SWORD, 120.0, "tools");
+                
                 addShopItem("bread", "Pão", Material.BREAD, 15.0, "food");
+                addShopItem("apple", "Maçã", Material.APPLE, 10.0, "food");
+                addShopItem("cooked_beef", "Bife Assado", Material.COOKED_BEEF, 25.0, "food");
+                addShopItem("cooked_chicken", "Frango Assado", Material.COOKED_CHICKEN, 20.0, "food");
+                
+                addShopItem("torch", "Tocha", Material.TORCH, 5.0, "misc");
+                addShopItem("chest", "Baú", Material.CHEST, 50.0, "misc");
+                addShopItem("crafting_table", "Mesa de Trabalho", Material.CRAFTING_TABLE, 30.0, "misc");
+                addShopItem("furnace", "Fornalha", Material.FURNACE, 60.0, "misc");
                 
                 plugin.getLogger().info("Itens da loja carregados com sucesso!");
+                plugin.getLogger().info("Total de categorias: " + categories.size());
+                
+                // Log detalhado das categorias e itens
+                for (ShopCategory category : categories.values()) {
+                    plugin.getLogger().info("Categoria: " + category.getId() + " - " + category.getName() + " - Total de itens: " + category.getItems().size());
+                }
             }
         }.runTaskAsynchronously(plugin);
     }
@@ -64,6 +87,10 @@ public class ShopManager {
         
         ShopItem item = new ShopItem(id, name, material, basePrice, category);
         shopItems.put(id, item);
+        category.addItem(item);
+        
+        // Log para debug
+        plugin.getLogger().info("Item adicionado: " + id + " - " + name + " - Categoria: " + category.getId());
     }
 
     /**

@@ -4,7 +4,7 @@ main: com.minecraft.economy.core.EconomyPlugin
 api-version: '1.20'
 depend: [Vault]
 authors: [Manus]
-description: Plugin de economia com sistema de shop dinâmico, loteria e dinheiro rotativo
+description: Plugin de economia com sistema de shop dinâmico, loteria, dinheiro rotativo e lojas de jogadores
 commands:
   money:
     description: Gerencia o dinheiro dos jogadores
@@ -31,6 +31,10 @@ commands:
     description: Transfere dinheiro para outro jogador
     usage: /pay <jogador> <quantia>
     permission: economy.money.pay
+  playershop:
+    description: Sistema de lojas de jogadores
+    usage: /playershop [create|list|open|add|remove|setprice|withdraw|help]
+    aliases: [pshop, lojap]
 permissions:
   economy.admin:
     description: Permite acesso a comandos administrativos
@@ -41,3 +45,12 @@ permissions:
   economy.money.top:
     description: Permite ver o ranking de jogadores mais ricos
     default: true
+  economy.playershop.use:
+    description: Permite usar lojas de jogadores
+    default: true
+  economy.playershop.create:
+    description: Permite criar lojas de jogadores
+    default: true
+  economy.playershop.admin:
+    description: Permite administrar lojas de jogadores
+    default: op

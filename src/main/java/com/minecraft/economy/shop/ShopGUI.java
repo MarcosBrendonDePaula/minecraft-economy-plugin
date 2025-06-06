@@ -66,6 +66,10 @@ public class ShopGUI {
         player.openInventory(inventory);
         openInventories.put(player, inventory);
         currentPage.put(player, 0);
+        
+        // Log para debug
+        plugin.getLogger().info("Abrindo menu principal da loja para " + player.getName());
+        plugin.getLogger().info("Total de categorias: " + shopManager.getCategories().size());
     }
 
     /**
@@ -80,6 +84,10 @@ public class ShopGUI {
             return;
         }
         
+        // Log para debug
+        plugin.getLogger().info("Abrindo categoria: " + categoryId + " - " + category.getName());
+        plugin.getLogger().info("Total de itens na categoria: " + category.getItems().size());
+        
         Inventory inventory = Bukkit.createInventory(null, 54, "§8Loja - " + category.getName());
         
         // Adiciona os itens da categoria
@@ -88,11 +96,15 @@ public class ShopGUI {
         int startIndex = page * 45;
         int endIndex = Math.min(startIndex + 45, items.size());
         
+        plugin.getLogger().info("Exibindo itens de " + startIndex + " a " + endIndex + " (total: " + items.size() + ")");
+        
         int slot = 0;
         for (int i = startIndex; i < endIndex; i++) {
             ShopItem item = items.get(i);
             ItemStack icon = item.createItemStack(1);
             inventory.setItem(slot, icon);
+            
+            plugin.getLogger().info("Adicionando item " + item.getName() + " no slot " + slot);
             
             slot++;
             if ((slot % 9) == 0 && slot >= 45) {
@@ -205,6 +217,9 @@ public class ShopGUI {
         // Abre o inventário
         player.openInventory(inventory);
         openInventories.put(player, inventory);
+        
+        // Log para debug
+        plugin.getLogger().info("Abrindo detalhes do item: " + shopItem.getId() + " - " + shopItem.getName());
     }
 
     /**
@@ -418,6 +433,7 @@ public class ShopGUI {
                         @Override
                         public void run() {
                             player.sendMessage("§aVocê vendeu §f" + shopItem.getDisplayName() + " §apor §f" + sellPrice + " " + plugin.getConfigManager().getCurrencyNamePlural() + "§a.");
+                            player.closeInventory();
                         }
                     }.runTask(plugin);
                 } else {
@@ -425,33 +441,11 @@ public class ShopGUI {
                         @Override
                         public void run() {
                             player.sendMessage("§cOcorreu um erro ao processar a venda. Tente novamente mais tarde.");
-                            // Devolve o item ao jogador
-                            player.getInventory().addItem(itemStack);
+                            player.getInventory().addItem(itemStack); // Devolve o item
+                            player.closeInventory();
                         }
                     }.runTask(plugin);
                 }
             });
-    }
-
-    /**
-     * Verifica se um inventário pertence à loja
-     * @param inventory Inventário
-     * @return true se o inventário pertence à loja, false caso contrário
-     */
-    public boolean isShopInventory(Inventory inventory) {
-        return openInventories.containsValue(inventory);
-    }
-
-    /**
-     * Fecha todos os inventários abertos
-     */
-    public void closeAllInventories() {
-        for (Player player : openInventories.keySet()) {
-            player.closeInventory();
-        }
-        openInventories.clear();
-        currentCategory.clear();
-        currentPage.clear();
-        searchQuery.clear();
     }
 }

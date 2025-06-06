@@ -4,6 +4,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 /**
  * Utilitário para lidar com itens de mods
@@ -50,6 +51,15 @@ public class ModItemUtils {
                 return null;
             }
         }
+    }
+    
+    /**
+     * Obtém um ItemStack a partir de um ID de item (suporta itens vanilla e de mods)
+     * @param itemId ID do item (formato: MATERIAL ou namespace:key para itens de mods)
+     * @return ItemStack obtido, ou null se o item não for encontrado
+     */
+    public static ItemStack getModItem(String itemId) {
+        return createItemStack(itemId);
     }
     
     /**
@@ -103,5 +113,42 @@ public class ModItemUtils {
         
         // Para itens vanilla, retorna apenas o nome do material
         return material.name();
+    }
+    
+    /**
+     * Obtém o nome de exibição de um item
+     * @param item ItemStack
+     * @return Nome de exibição do item, ou nome do material se não tiver nome personalizado
+     */
+    public static String getItemName(ItemStack item) {
+        if (item == null) {
+            return "Desconhecido";
+        }
+        
+        // Verifica se o item tem um nome personalizado
+        if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
+            return item.getItemMeta().getDisplayName();
+        }
+        
+        // Retorna o nome do material formatado
+        String materialName = item.getType().name();
+        materialName = materialName.toLowerCase().replace('_', ' ');
+        
+        // Capitaliza cada palavra
+        StringBuilder result = new StringBuilder();
+        boolean capitalizeNext = true;
+        for (char c : materialName.toCharArray()) {
+            if (Character.isSpaceChar(c)) {
+                capitalizeNext = true;
+                result.append(c);
+            } else if (capitalizeNext) {
+                result.append(Character.toUpperCase(c));
+                capitalizeNext = false;
+            } else {
+                result.append(c);
+            }
+        }
+        
+        return result.toString();
     }
 }

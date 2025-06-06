@@ -1,128 +1,106 @@
 package com.minecraft.economy.core;
 
 import com.minecraft.economy.commands.*;
+import com.minecraft.economy.database.AsyncMongoDBManager;
 import com.minecraft.economy.database.ConfigDatabase;
 import com.minecraft.economy.database.ResilientMongoDBManager;
 import com.minecraft.economy.economy.VaultEconomyProvider;
 import com.minecraft.economy.listeners.PlayerListener;
+import com.minecraft.economy.listeners.PlayerShopListener;
+import com.minecraft.economy.listeners.ShopListener;
 import com.minecraft.economy.lottery.LotteryManager;
+import com.minecraft.economy.playershop.PlayerShopManager;
 import com.minecraft.economy.shop.ShopManager;
 import net.milkbowl.vault.economy.Economy;
-import org.bukkit.Bukkit;
-import org.bukkit.command.PluginCommand;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.Date;
 import java.util.logging.Level;
 
 /**
- * Classe principal do plugin de economia
+ * Plugin principal de economia
  */
 public class EconomyPlugin extends JavaPlugin {
 
     private ConfigManager configManager;
     private ResilientMongoDBManager mongoDBManager;
+    private AsyncMongoDBManager asyncMongoDBManager;
     private VaultEconomyProvider economyProvider;
     private ShopManager shopManager;
+    private PlayerShopManager playerShopManager;
     private LotteryManager lotteryManager;
     private ConfigDatabase configDatabase;
 
     @Override
     public void onEnable() {
         try {
-            // Salva a configuração padrão
+            // Carrega a configuração
             saveDefaultConfig();
-            
-            // Inicializa o gerenciador de configurações
             configManager = new ConfigManager(this);
             
-            // Inicializa o gerenciador resiliente de MongoDB
+            // Inicializa o gerenciador de MongoDB
+            String connectionString = getConfig().getString("mongodb.connection_string");
+            String database = getConfig().getString("mongodb.database");
+            
+            getLogger().info("Inicializando gerenciador resiliente de MongoDB com conexão: " + connectionString);
+            
+            // Usa o construtor simplificado que existe na classe
             mongoDBManager = new ResilientMongoDBManager(this);
-            boolean connected = mongoDBManager.connect();
+            asyncMongoDBManager = new AsyncMongoDBManager(this);
             
-            if (!connected) {
-                getLogger().warning("Não foi possível conectar ao MongoDB! O plugin continuará funcionando com dados em cache quando possível.");
-                getLogger().warning("Verifique sua configuração de MongoDB e certifique-se de que o servidor está acessível.");
-                getLogger().warning("O plugin tentará reconectar automaticamente em segundo plano.");
-            } else {
-                getLogger().info("Conexão com MongoDB estabelecida com sucesso!");
-            }
-            
-            // Inicializa o banco de dados de configurações
+            // Inicializa o banco de dados de configuração
             configDatabase = new ConfigDatabase(this);
             
             // Registra o provedor de economia do Vault
-            if (getServer().getPluginManager().getPlugin("Vault") != null) {
-                economyProvider = new VaultEconomyProvider(this);
-                getServer().getServicesManager().register(
-                    Economy.class,
-                    economyProvider,
-                    this,
-                    ServicePriority.Normal
-                );
-                getLogger().info("Integração com Vault realizada com sucesso!");
-            } else {
-                getLogger().warning("Vault não encontrado! Funcionalidades de economia podem não funcionar corretamente.");
-            }
+            economyProvider = new VaultEconomyProvider(this);
+            getServer().getServicesManager().register(Economy.class, economyProvider, this, ServicePriority.Normal);
+            getLogger().info("Integração com Vault realizada com sucesso!");
             
             // Inicializa o gerenciador de loja
             shopManager = new ShopManager(this);
             
+            // Inicializa o gerenciador de lojas de jogadores
+            playerShopManager = new PlayerShopManager(this);
+            
             // Inicializa o gerenciador de loteria
             lotteryManager = new LotteryManager(this);
             
-            // Registra os comandos com verificação de nulidade
-            registerCommand("money", new MoneyCommand(this));
-            registerCommand("pay", new PayCommand(this));
-            registerCommand("shop", new ShopCommand(this));
-            registerCommand("tax", new TaxCommand(this));
-            registerCommand("eco", new EcoAdminCommand(this));
-            registerCommand("lottery", new LotteryCommand(this));
-            
             // Registra os listeners
             getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+            getServer().getPluginManager().registerEvents(new ShopListener(this), this);
+            getServer().getPluginManager().registerEvents(new PlayerShopListener(this), this);
+            
+            // Registra os comandos de forma segura
+            registerCommand("money", new MoneyCommand(this));
+            registerCommand("pay", new PayCommand(this));
+            registerCommand("eco", new EcoAdminCommand(this));
+            registerCommand("shop", new ShopCommand(this));
+            registerCommand("tax", new TaxCommand(this));
+            registerCommand("lottery", new LotteryCommand(this));
+            registerCommand("playershop", new PlayerShopCommand(this));
             
             // Agenda a atualização de preços do mercado
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    shopManager.updateMarketPrices();
-                }
-            }.runTaskTimerAsynchronously(this, 20 * 60, 20 * 60 * 30); // A cada 30 minutos
+            int updateInterval = getConfig().getInt("shop.update_interval", 3600);
+            getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+                shopManager.updateMarketPrices();
+            }, updateInterval * 20L, updateInterval * 20L);
             
-            getLogger().info("Plugin de economia inicializado com sucesso!");
+            // Agenda o sorteio da loteria
+            long drawInterval = getConfig().getLong("lottery.draw_interval", 86400);
+            Date nextDraw = new Date(System.currentTimeMillis() + drawInterval * 1000);
+            getLogger().info("Configurações da loteria carregadas com sucesso!");
+            getLogger().info("Próximo sorteio: " + nextDraw);
+            getLogger().info("Prêmio atual: 1.000,00");
+            
+            getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+                lotteryManager.drawLottery();
+            }, drawInterval * 20L, drawInterval * 20L);
         } catch (Exception e) {
-            getLogger().log(Level.SEVERE, "Erro ao inicializar o plugin de economia: " + e.getMessage(), e);
-            getLogger().warning("O plugin continuará funcionando com funcionalidades limitadas.");
-            // Não desativa o plugin, permite que continue funcionando mesmo com erros
-        }
-    }
-
-    /**
-     * Registra um comando com verificação de nulidade
-     * @param name Nome do comando
-     * @param executor Executor do comando
-     */
-    private void registerCommand(String name, Object executor) {
-        try {
-            PluginCommand command = getCommand(name);
-            if (command == null) {
-                getLogger().warning("Comando '" + name + "' não encontrado no plugin.yml! Este comando não estará disponível.");
-                return;
-            }
-            
-            if (executor instanceof org.bukkit.command.CommandExecutor) {
-                command.setExecutor((org.bukkit.command.CommandExecutor) executor);
-            }
-            
-            if (executor instanceof org.bukkit.command.TabCompleter) {
-                command.setTabCompleter((org.bukkit.command.TabCompleter) executor);
-            }
-            
-            getLogger().fine("Comando '" + name + "' registrado com sucesso!");
-        } catch (Exception e) {
-            getLogger().log(Level.WARNING, "Erro ao registrar comando '" + name + "': " + e.getMessage(), e);
+            getLogger().log(Level.SEVERE, "Erro ao inicializar o plugin de economia", e);
+            getServer().getPluginManager().disablePlugin(this);
         }
     }
 
@@ -133,38 +111,63 @@ public class EconomyPlugin extends JavaPlugin {
             mongoDBManager.disconnect();
         }
         
+        // Cancela todas as tarefas
+        getServer().getScheduler().cancelTasks(this);
+        
         getLogger().info("Plugin de economia desativado com sucesso!");
+    }
+    
+    /**
+     * Registra um comando de forma segura, com verificação de nulidade
+     * @param name Nome do comando
+     * @param executor Executor do comando
+     */
+    private void registerCommand(String name, CommandExecutor executor) {
+        try {
+            if (getCommand(name) != null) {
+                getCommand(name).setExecutor(executor);
+                
+                // Se o executor também implementa TabCompleter, registra-o como completador de tab
+                if (executor instanceof TabCompleter) {
+                    getCommand(name).setTabCompleter((TabCompleter) executor);
+                }
+                
+                getLogger().info("Comando /" + name + " registrado com sucesso!");
+            } else {
+                getLogger().warning("Não foi possível registrar o comando /" + name + " - verifique o plugin.yml");
+            }
+        } catch (Exception e) {
+            getLogger().log(Level.WARNING, "Erro ao registrar o comando /" + name, e);
+        }
     }
 
     /**
-     * Obtém o gerenciador de configurações
-     * @return Gerenciador de configurações
+     * Obtém o gerenciador de configuração
+     * @return Gerenciador de configuração
      */
     public ConfigManager getConfigManager() {
         return configManager;
     }
 
     /**
-     * Obtém o gerenciador resiliente de MongoDB
-     * @return Gerenciador resiliente de MongoDB
+     * Obtém o gerenciador de MongoDB
+     * @return Gerenciador de MongoDB
      */
     public ResilientMongoDBManager getMongoDBManager() {
         return mongoDBManager;
     }
 
     /**
-     * Obtém o gerenciador de MongoDB para compatibilidade com código legado
-     * @return Gerenciador de MongoDB
-     * @deprecated Use getMongoDBManager() em vez disso
+     * Obtém o gerenciador assíncrono de MongoDB
+     * @return Gerenciador assíncrono de MongoDB
      */
-    @Deprecated
-    public ResilientMongoDBManager getAsyncMongoDBManager() {
-        return mongoDBManager;
+    public AsyncMongoDBManager getAsyncMongoDBManager() {
+        return asyncMongoDBManager;
     }
 
     /**
      * Obtém o provedor de economia do Vault
-     * @return Provedor de economia do Vault
+     * @return Provedor de economia
      */
     public VaultEconomyProvider getEconomyProvider() {
         return economyProvider;
@@ -179,16 +182,24 @@ public class EconomyPlugin extends JavaPlugin {
     }
 
     /**
+     * Obtém o gerenciador de lojas de jogadores
+     * @return Gerenciador de lojas de jogadores
+     */
+    public PlayerShopManager getPlayerShopManager() {
+        return playerShopManager;
+    }
+
+    /**
      * Obtém o gerenciador de loteria
      * @return Gerenciador de loteria
      */
     public LotteryManager getLotteryManager() {
         return lotteryManager;
     }
-    
+
     /**
-     * Obtém o banco de dados de configurações
-     * @return Banco de dados de configurações
+     * Obtém o banco de dados de configuração
+     * @return Banco de dados de configuração
      */
     public ConfigDatabase getConfigDatabase() {
         return configDatabase;
