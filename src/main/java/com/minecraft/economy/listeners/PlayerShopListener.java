@@ -29,6 +29,7 @@ public class PlayerShopListener implements Listener {
     private final EconomyPlugin plugin;
     private final PlayerShopManager shopManager;
     private final PlayerShopGUI shopGUI;
+    private final PlayerChatListener chatListener;
     private final Map<UUID, ItemStack> pendingAddItems = new HashMap<>();
     private final Map<UUID, Double> pendingPrices = new HashMap<>();
 
@@ -36,6 +37,10 @@ public class PlayerShopListener implements Listener {
         this.plugin = plugin;
         this.shopManager = plugin.getPlayerShopManager();
         this.shopGUI = new PlayerShopGUI(plugin, shopManager);
+        this.chatListener = new PlayerChatListener(plugin);
+        
+        // Registra o listener de chat
+        plugin.getServer().getPluginManager().registerEvents(chatListener, plugin);
     }
 
     @EventHandler(priority = EventPriority.HIGH)
@@ -127,7 +132,9 @@ public class PlayerShopListener implements Listener {
             player.closeInventory();
             player.sendMessage("§aDigite o nome da sua nova loja no chat:");
             player.sendMessage("§7(ou digite 'cancelar' para cancelar)");
-            // Implementação: capturar próxima mensagem do chat
+            
+            // Define o estado de chat para criação de loja
+            chatListener.setChatState(player, PlayerChatListener.ChatState.CREATING_SHOP);
             return;
         }
         
@@ -188,7 +195,10 @@ public class PlayerShopListener implements Listener {
             player.closeInventory();
             player.sendMessage("§cVocê tem certeza que deseja deletar esta loja? Digite 'confirmar' para confirmar:");
             player.sendMessage("§7(ou digite 'cancelar' para cancelar)");
-            // Implementação: capturar próxima mensagem do chat
+            
+            // Define o estado de chat para confirmação de exclusão
+            chatListener.setChatState(player, PlayerChatListener.ChatState.CONFIRMING_DELETE_SHOP);
+            chatListener.setPendingShop(player, shop);
             return;
         }
         
@@ -231,8 +241,14 @@ public class PlayerShopListener implements Listener {
                 player.sendMessage("§7- Digite 'preço <valor>' para alterar o preço");
                 player.sendMessage("§7- Digite 'dinâmico sim' para ativar preço dinâmico");
                 player.sendMessage("§7- Digite 'dinâmico não' para desativar preço dinâmico");
+                player.sendMessage("§7- Digite 'estoque adicionar <quantidade>' para adicionar itens ao estoque");
+                player.sendMessage("§7- Digite 'estoque remover <quantidade>' para remover itens do estoque");
                 player.sendMessage("§7- Digite 'cancelar' para cancelar");
-                // Implementação: capturar próxima mensagem do chat
+                
+                // Define o estado de chat para gerenciamento de item
+                chatListener.setChatState(player, PlayerChatListener.ChatState.MANAGING_ITEM);
+                chatListener.setPendingShop(player, shop);
+                chatListener.setPendingItem(player, item);
             }
         }
     }
@@ -403,9 +419,12 @@ public class PlayerShopListener implements Listener {
             player.closeInventory();
             player.sendMessage("§aDigite o preço do item no chat:");
             player.sendMessage("§7(ou digite 'cancelar' para cancelar)");
-            pendingAddItems.put(player.getUniqueId(), itemToAdd);
-            shopGUI.setPendingDynamicPrice(player, false);
-            // Implementação: capturar próxima mensagem do chat
+            
+            // Define o estado de chat para definição de preço
+            chatListener.setChatState(player, PlayerChatListener.ChatState.SETTING_ITEM_PRICE);
+            chatListener.setPendingShop(player, shop);
+            chatListener.setPendingAddItem(player, itemToAdd);
+            chatListener.setPendingDynamicPrice(player, false);
             return;
         }
         
@@ -414,9 +433,12 @@ public class PlayerShopListener implements Listener {
             player.closeInventory();
             player.sendMessage("§aDigite o preço do item no chat:");
             player.sendMessage("§7(ou digite 'cancelar' para cancelar)");
-            pendingAddItems.put(player.getUniqueId(), itemToAdd);
-            shopGUI.setPendingDynamicPrice(player, true);
-            // Implementação: capturar próxima mensagem do chat
+            
+            // Define o estado de chat para definição de preço
+            chatListener.setChatState(player, PlayerChatListener.ChatState.SETTING_ITEM_PRICE);
+            chatListener.setPendingShop(player, shop);
+            chatListener.setPendingAddItem(player, itemToAdd);
+            chatListener.setPendingDynamicPrice(player, true);
             return;
         }
         

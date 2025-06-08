@@ -49,7 +49,10 @@ public class EconomyPlugin extends JavaPlugin {
             
             // Usa o construtor simplificado que existe na classe
             mongoDBManager = new ResilientMongoDBManager(this);
+            mongoDBManager.connect();
+            
             asyncMongoDBManager = new AsyncMongoDBManager(this);
+            asyncMongoDBManager.connect();
             
             // Inicializa o banco de dados de configuração
             configDatabase = new ConfigDatabase(this);
@@ -109,6 +112,10 @@ public class EconomyPlugin extends JavaPlugin {
         // Fecha a conexão com o MongoDB
         if (mongoDBManager != null) {
             mongoDBManager.disconnect();
+        }
+        
+        if (asyncMongoDBManager != null) {
+            asyncMongoDBManager.disconnect();
         }
         
         // Cancela todas as tarefas

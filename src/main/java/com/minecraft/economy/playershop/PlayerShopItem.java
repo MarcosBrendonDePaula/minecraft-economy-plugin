@@ -22,6 +22,7 @@ public class PlayerShopItem {
     private boolean available;
     private final long createdAt;
     private boolean dynamicPrice; // Indica se o preço é dinâmico (baseado em oferta e demanda)
+    private int quantity; // Quantidade de itens em estoque
 
     /**
      * Construtor para criar um novo item
@@ -41,6 +42,18 @@ public class PlayerShopItem {
      * @param dynamicPrice Se o preço deve ser atualizado conforme oferta e demanda
      */
     public PlayerShopItem(EconomyPlugin plugin, ItemStack itemStack, double price, boolean dynamicPrice) {
+        this(plugin, itemStack, price, dynamicPrice, 1);
+    }
+    
+    /**
+     * Construtor para criar um novo item com opção de preço dinâmico e quantidade
+     * @param plugin Instância do plugin
+     * @param itemStack Item a ser vendido
+     * @param price Preço do item
+     * @param dynamicPrice Se o preço deve ser atualizado conforme oferta e demanda
+     * @param quantity Quantidade inicial do item
+     */
+    public PlayerShopItem(EconomyPlugin plugin, ItemStack itemStack, double price, boolean dynamicPrice, int quantity) {
         this.plugin = plugin;
         this.id = UUID.randomUUID();
         this.itemStack = itemStack.clone();
@@ -48,6 +61,7 @@ public class PlayerShopItem {
         this.available = true;
         this.createdAt = System.currentTimeMillis();
         this.dynamicPrice = dynamicPrice;
+        this.quantity = quantity;
     }
 
     /**
@@ -62,6 +76,7 @@ public class PlayerShopItem {
         this.available = doc.getBoolean("available", true);
         this.createdAt = doc.getLong("created_at");
         this.dynamicPrice = doc.getBoolean("dynamic_price", false);
+        this.quantity = doc.getInteger("quantity", 1); // Carrega a quantidade, padrão 1
         
         // Carrega o item
         String itemId = doc.getString("item_id");
@@ -71,10 +86,17 @@ public class PlayerShopItem {
     /**
      * Cria um ItemStack a partir de um ID
      * @param itemId ID do item
-     * @return ItemStack criado
+     * @return ItemStack criado ou null se o item não for encontrado
      */
     private ItemStack createItemStackFromId(String itemId) {
-        return ModItemUtils.getModItem(itemId);
+        ItemStack result = ModItemUtils.getModItem(itemId);
+        
+        // Se o item não for encontrado, registra um aviso e retorna null
+        if (result == null) {
+            plugin.getLogger().warning("Item não encontrado com ID: " + itemId + ". O item será removido da loja.");
+        }
+        
+        return result;
     }
 
     /**
@@ -89,6 +111,7 @@ public class PlayerShopItem {
         doc.append("available", available);
         doc.append("created_at", createdAt);
         doc.append("dynamic_price", dynamicPrice);
+        doc.append("quantity", quantity); // Salva a quantidade
         return doc;
     }
 
@@ -102,9 +125,15 @@ public class PlayerShopItem {
 
     /**
      * Cria um ItemStack para exibição na interface
-     * @return ItemStack para exibição
+     * @return ItemStack para exibição ou null se o item não existir
      */
     public ItemStack createDisplayItem() {
+        // Se o itemStack for nulo, retorna null para indicar que o item deve ser removido
+        if (itemStack == null) {
+            return null;
+        }
+        
+        // Procede normalmente se o itemStack não for nulo
         ItemStack displayItem = itemStack.clone();
         ItemMeta meta = displayItem.getItemMeta();
         
@@ -118,6 +147,9 @@ public class PlayerShopItem {
             lore.add("§7Preço fixo: §aSim");
         }
         
+        // Adiciona informações de estoque
+        lore.add("§7Estoque: §f" + quantity);
+        
         if (!available) {
             lore.add("§cItem vendido");
         }
@@ -130,9 +162,14 @@ public class PlayerShopItem {
 
     /**
      * Cria um ItemStack para o inventário do jogador
-     * @return ItemStack para o inventário
+     * @return ItemStack para o inventário ou null se o item não existir
      */
     public ItemStack createItemStack() {
+        // Se o itemStack for nulo, retorna null para indicar que o item deve ser removido
+        if (itemStack == null) {
+            return null;
+        }
+        
         return itemStack.clone();
     }
 
@@ -227,5 +264,68 @@ public class PlayerShopItem {
             double minPrice = 1.0;
             if (price < minPrice) price = minPrice;
         }
+    }
+    
+    /**
+     * Obtém a quantidade de itens em estoque
+     * @return Quantidade de itens
+     */
+    public int getQuantity() {
+        return quantity;
+    }
+    
+    /**
+     * Define a quantidade de itens em estoque
+     * @param quantity Nova quantidade
+     */
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+    
+    /**
+     * Adiciona itens ao estoque
+     * @param amount Quantidade a adicionar
+     * @return Quantidade atual após a adição
+     */
+    public int addStock(int amount) {
+        if (amount <= 0) {
+            return quantity;
+        }
+        
+        quantity += amount;
+        return quantity;
+    }
+    
+    /**
+     * Remove itens do estoque
+     * @param amount Quantidade a remover
+     * @return Quantidade atual após a remoção ou -1 se não houver estoque suficiente
+     */
+    public int removeStock(int amount) {
+        if (amount <= 0) {
+            return quantity;
+        }
+        
+        if (quantity < amount) {
+            return -1; // Estoque insuficiente
+        }
+        
+        quantity -= amount;
+        
+        // Se o estoque chegar a zero, o item não está mais disponível
+        if (quantity == 0) {
+            available = false;
+        }
+        
+        return quantity;
+    }
+    
+    /**
+     * Verifica se há estoque suficiente
+     * @param amount Quantidade a verificar
+     * @return true se houver estoque suficiente
+     */
+    public boolean hasStock(int amount) {
+        return quantity >= amount;
     }
 }
